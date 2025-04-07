@@ -186,21 +186,38 @@ async def add_connectors_if_not_exist(session: AsyncSession):
     """
     connector_list = get_connectors_list()
     logger.info("Checking for existence of connectors.")
+    logger.debug(f"Connector list: {connector_list}")  # Affiche la liste des connecteurs pour vérifier ce qui est passé
 
     for connector_data in connector_list:
         logger.info(f"Checking for existence of connector {connector_data['connector_name']}")
+        logger.debug(f"Connector data: {connector_data}")  # Affiche les détails de chaque connecteur avant la requête
+
         query = select(Connectors).where(
             Connectors.connector_name == connector_data["connector_name"],
         )
-        result = await session.execute(query)
-        existing_connector = result.scalars().first()
+        logger.debug(f"SQL Query: {str(query)}")  # Affiche la requête SQL générée pour chaque connecteur
 
-        if existing_connector is None:
-            new_connector = Connectors(**connector_data)
-            session.add(new_connector)
-            logger.info(f"Added new connector: {connector_data['connector_name']}")
+        try:
+            result = await session.execute(query)
+            logger.debug(f"Query result: {result}")  # Affiche le résultat de la requête
 
-    await session.commit()
+            existing_connector = result.scalars().first()
+            logger.debug(f"Existing connector: {existing_connector}")  # Affiche le connecteur existant (si trouvé)
+
+            if existing_connector is None:
+                new_connector = Connectors(**connector_data)
+                session.add(new_connector)
+                logger.info(f"Added new connector: {connector_data['connector_name']}")
+
+        except Exception as e:
+            logger.error(f"Error during checking or adding connector {connector_data['connector_name']}: {e}")
+            # Capture l'exception et l'affiche pour le débogage
+
+    try:
+        await session.commit()
+        logger.info("Commit successful")
+    except Exception as e:
+        logger.error(f"Error during commit: {e}")
 
 
 async def delete_connectors_if_exist(session: AsyncSession):
