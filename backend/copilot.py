@@ -169,26 +169,33 @@ app.include_router(api_router)
 
 @app.on_event("startup")
 async def init_db():
-    logger.info("Initializing database")
-    if environment == "PRODUCTION":
-        await create_database_if_not_exists(db_url=SQLALCHEMY_DATABASE_URI_NO_DB, db_name="copilot")
-        await create_copilot_user_if_not_exists(db_url=SQLALCHEMY_DATABASE_URI_NO_DB, db_user_name="copilot")
-    apply_migrations()
-    await create_buckets()
-    await add_connectors(async_engine)
-    await delete_connectors(async_engine)
-    await create_roles(async_engine)
-    await create_available_integrations(async_engine)
-    await create_available_network_connectors(async_engine)
-    await ensure_admin_user(async_engine)
-    await ensure_scheduler_user(async_engine)
+    try:
+        logger.info("Initializing database")
+        if environment == "PRODUCTION":
+            await create_database_if_not_exists(db_url=SQLALCHEMY_DATABASE_URI_NO_DB, db_name="copilot")
+            await create_copilot_user_if_not_exists(db_url=SQLALCHEMY_DATABASE_URI_NO_DB, db_user_name="copilot")
+        apply_migrations()  # Assure-toi que cette ligne fonctionne sans erreur
+        await create_buckets()
+        await add_connectors(async_engine)
+        await delete_connectors(async_engine)
+        await create_roles(async_engine)
+        await create_available_integrations(async_engine)
+        await create_available_network_connectors(async_engine)
+        await ensure_admin_user(async_engine)
+        await ensure_scheduler_user(async_engine)
 
-    # Initialize the scheduler
-    scheduler = await init_scheduler()
+        # Initialize the scheduler
+        scheduler = await init_scheduler()
 
-    if not scheduler.running:
-        logger.info("Scheduler is not running, starting now...")
-        scheduler.start()
+        if not scheduler.running:
+            logger.info("Scheduler is not running, starting now...")
+            scheduler.start()
+
+        logger.info("Database initialized successfully")
+
+    except Exception as e:
+        logger.error(f"Error during database initialization: {e}")
+        raise e
 
 
 # Create `scoutsuite-report` directory if it doesnt exist
